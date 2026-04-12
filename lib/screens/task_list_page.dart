@@ -19,6 +19,8 @@ class TaskListScreen extends StatefulWidget {
 
 class _TaskListScreenState extends State<TaskListScreen> {
   final TextEditingController _taskController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   late TaskService _taskService;
   late Stream<List<Task>> _taskStream;
@@ -33,6 +35,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   @override
   void dispose() {
     _taskController.dispose(); // IMPORTANT: always dispose controllers
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -176,7 +179,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Task Manager'),
+        title: const Text(
+          'Task Manager',
+          style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+          ),
         actions: [
           Row(
             children: [
@@ -193,6 +199,34 @@ class _TaskListScreenState extends State<TaskListScreen> {
       ),
       body: Column(
         children: [
+          // ── Search Bar ─────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search tasks...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.toLowerCase();
+                });
+              },
+            ),
+          ),
           // ── Task list ──────────────────────────────────────────
           Expanded(
             child: StreamBuilder<List<Task>>(
@@ -204,7 +238,11 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final tasks = snapshot.data!;
+                final allTasks = snapshot.data!;
+
+                final tasks = allTasks.where((task) {
+                  return task.title.toLowerCase().contains(_searchQuery);
+                }).toList();
                 if (tasks.isEmpty) {
                   return const Center(child: Text('No tasks yet!'));
                 }
