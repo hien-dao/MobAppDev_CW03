@@ -22,4 +22,8 @@ class TaskService {
   Future<void> deleteTask(String id) async {
     await _firestore.doc(id).delete();
   }
+
+  Future<void> toggleTaskCompletion(Task task) async {
+    await _firestore.doc(task.id).update({'isCompleted': !task.isCompleted});
+  }
 }
