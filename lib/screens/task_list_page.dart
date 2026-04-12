@@ -4,7 +4,14 @@ import '../models/task.dart';
 import '../services/task_service.dart';
 
 class TaskListScreen extends StatefulWidget {
-  const TaskListScreen({super.key});
+  final Function(bool) onToggleTheme;
+  final bool isDarkMode;
+
+  const TaskListScreen({
+    super.key,
+    required this.onToggleTheme,
+    required this.isDarkMode,
+  });
 
   @override
   State<TaskListScreen> createState() => _TaskListScreenState();
@@ -168,7 +175,22 @@ class _TaskListScreenState extends State<TaskListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Task Manager')),
+      appBar: AppBar(
+        title: const Text('Task Manager'),
+        actions: [
+          Row(
+            children: [
+              const Icon(Icons.light_mode),
+              Switch(
+                value: widget.isDarkMode,
+                onChanged: widget.onToggleTheme,
+              ),
+              const Icon(Icons.dark_mode),
+              const SizedBox(width: 8),
+            ],
+          ),
+        ],
+      ),
       body: Column(
         children: [
           // ── Task list ──────────────────────────────────────────
