@@ -93,6 +93,78 @@ class _TaskListScreenState extends State<TaskListScreen> {
     _taskController.clear();
   }
 
+  Widget _buildSubtasks(Task task) {
+    return Column(
+      children: [
+        ...task.subtasks.asMap().entries.map((entry) {
+          final index = entry.key;
+          final subtask = entry.value;
+
+          return ListTile(
+            title: Text(subtask['title'] ?? ''),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () => _removeSubtask(task, index),
+            ),
+          );
+        }),
+
+        TextButton.icon(
+          onPressed: () => _addSubtask(task),
+          icon: const Icon(Icons.add),
+          label: const Text('Add Subtask'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _addSubtask(Task task) async {
+    final controller = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('New Subtask'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Subtask name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final text = controller.text.trim();
+              if (text.isEmpty) return;
+
+              final updatedSubtasks = List<Map<String, dynamic>>.from(task.subtasks)
+                ..add({'title': text});
+
+              await _taskService.updateTask(
+                task.copyWith(subtasks: updatedSubtasks),
+              );
+
+              Navigator.pop(ctx);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _removeSubtask(Task task, int index) async {
+    final updatedSubtasks = List<Map<String, dynamic>>.from(task.subtasks)
+      ..removeAt(index);
+
+    await _taskService.updateTask(
+      task.copyWith(subtasks: updatedSubtasks),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -120,32 +192,36 @@ class _TaskListScreenState extends State<TaskListScreen> {
                     final task = tasks[index];
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: ListTile(
+                      child: ExpansionTile(
                         title: Text(task.title),
                         subtitle: Text('Created at: ${task.createdAt}'),
+
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Toggle completion button
                             IconButton(
                               icon: Icon(
-                                task.isCompleted ? Icons.check_box : Icons.check_box_outline_blank,
+                                task.isCompleted
+                                    ? Icons.check_box
+                                    : Icons.check_box_outline_blank,
                                 color: task.isCompleted ? Colors.green : null,
                               ),
                               onPressed: () => _taskService.toggleTaskCompletion(task),
                             ),
-                            // Edit button
                             IconButton(
                               icon: const Icon(Icons.edit, color: Colors.blue),
                               onPressed: () => _createOrUpdateTask(task: task),
                             ),
-                            // Delete button
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
                               onPressed: () => _taskService.deleteTask(task.id),
                             ),
                           ],
-                        )
+                        ),
+
+                        children: [
+                          _buildSubtasks(task),
+                        ],
                       ),
                     );
                   },
