@@ -1,0 +1,25 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../models/task.dart';
+
+class TaskService {
+  final _firestore = FirebaseFirestore.instance.collection('tasks');
+
+  Future<void> addTask(Task task) async {
+    await _firestore.add(task.toMap());
+  }
+
+  Future<void> updateTask(Task task) async {
+    await _firestore.doc(task.id).update(task.toMap());
+  }
+
+  Future<void> deleteTask(String id) async {
+    await _firestore.doc(id).delete();
+  }
+
+  Stream<List<Task>> taskStream() {
+    return _firestore.snapshots().map((snapshot) =>
+        snapshot.docs.map((doc) => Task.fromMap(doc.data())).toList());
+  }
+
+}
