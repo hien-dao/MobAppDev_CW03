@@ -5,6 +5,12 @@ import '../models/task.dart';
 class TaskService {
   final _firestore = FirebaseFirestore.instance.collection('tasks');
 
+  Stream<List<Task>> getTasks() {
+    return _firestore.orderBy('createdAt', descending: true).snapshots().map(
+      (snapshot) => snapshot.docs.map((doc) => Task.fromMap(doc.id, doc.data())).toList(),
+    );
+  }
+
   Future<void> addTask(Task task) async {
     await _firestore.add(task.toMap());
   }
@@ -16,10 +22,4 @@ class TaskService {
   Future<void> deleteTask(String id) async {
     await _firestore.doc(id).delete();
   }
-
-  Stream<List<Task>> taskStream() {
-    return _firestore.snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => Task.fromMap(doc.data())).toList());
-  }
-
 }
