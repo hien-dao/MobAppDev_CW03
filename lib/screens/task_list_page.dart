@@ -12,7 +12,6 @@ class TaskListScreen extends StatefulWidget {
 
 class _TaskListScreenState extends State<TaskListScreen> {
   final TextEditingController _taskController = TextEditingController();
-  List<Task> _tasks = [];
 
   late TaskService _taskService;
   late Stream<List<Task>> _taskStream;
@@ -30,27 +29,76 @@ class _TaskListScreenState extends State<TaskListScreen> {
     super.dispose();
   }
 
+  Future<void> _createOrUpdateTask({Task? task}) async {
+    final isEdit = task != null;
+
+    // Pre-fill when editing
+    _taskController.text = task?.title ?? '';
+
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(isEdit ? 'Update Task' : 'Create Task'),
+          content: TextField(
+            controller: _taskController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _taskController.clear();
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              child: Text(isEdit ? 'Update' : 'Create'),
+              onPressed: () async {
+                final text = _taskController.text.trim();
+                if (text.isEmpty) return;
+
+                if (isEdit) {
+                  await _taskService.updateTask(
+                    Task(
+                      id: task.id,
+                      title: text,
+                      createdAt: task.createdAt, // keep original
+                      isCompleted: task.isCompleted,
+                    ),
+                  );
+                } else {
+                  await _taskService.addTask(
+                    Task(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      title: text,
+                      createdAt: DateTime.now(),
+                    ),
+                  );
+                }
+
+                Navigator.of(ctx).pop();
+                _taskController.clear();
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    // Safety clear (in case dialog dismissed by tapping outside)
+    _taskController.clear();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Task Manager')),
       body: Column(
         children: [
-          // ── Input row ──────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(children: [
-              Expanded(child: TextField(controller: _taskController,
-                decoration: const InputDecoration(hintText: 'New task name...'),
-              )),
-              const SizedBox(width: 8),
-              ElevatedButton(onPressed: () => _taskService.addTask(Task(
-                id: DateTime.now().toIso8601String(),
-                title: _taskController.text.trim(),
-                createdAt: DateTime.now(),
-              )), child: const Text('Add')),
-            ]),
-          ),
           // ── Task list ──────────────────────────────────────────
           Expanded(
             child: StreamBuilder<List<Task>>(
@@ -70,11 +118,34 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   itemCount: tasks.length,
                   itemBuilder: (context, index) {
                     final task = tasks[index];
-                    return ListTile(
-                      title: Text(task.title),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () => _taskService.deleteTask(task.id),
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: ListTile(
+                        title: Text(task.title),
+                        subtitle: Text('Created at: ${task.createdAt}'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Toggle completion button
+                            IconButton(
+                              icon: Icon(
+                                task.isCompleted ? Icons.check_box : Icons.check_box_outline_blank,
+                                color: task.isCompleted ? Colors.green : null,
+                              ),
+                              onPressed: () => _taskService.toggleTaskCompletion(task),
+                            ),
+                            // Edit button
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _createOrUpdateTask(task: task),
+                            ),
+                            // Delete button
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _taskService.deleteTask(task.id),
+                            ),
+                          ],
+                        )
                       ),
                     );
                   },
@@ -83,6 +154,12 @@ class _TaskListScreenState extends State<TaskListScreen> {
             ),
           ),
         ],
+      ),
+
+      // ── Add Task Button ─────────────────────────────────────
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _createOrUpdateTask(),
+        child: const Icon(Icons.add),
       ),
     );
   }
