@@ -14,14 +14,14 @@ class _TaskListScreenState extends State<TaskListScreen> {
   final TextEditingController _taskController = TextEditingController();
   List<Task> _tasks = [];
 
-  TaskService? _taskService;
+  late TaskService _taskService;
   late Stream<List<Task>> _taskStream;
 
   @override
   void initState() {
     super.initState();
     _taskService = TaskService();
-    _taskStream = _taskService!.getTasks();
+    _taskStream = _taskService.getTasks();
   }
 
   @override
